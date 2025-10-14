@@ -1152,37 +1152,7 @@ body {
   .form-input { padding: 14px 16px; }
 }
 
-/* Modern Dashboard Styles */
-.modern-dashboard { min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
-
-.dashboard-header { 
-  background: rgba(255,255,255,0.02); 
-  border-bottom: 1px solid rgba(255,255,255,0.08); 
-  padding: 32px 0; 
-}
-
-.header-content { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  gap: 32px; 
-}
-
-.dashboard-title { 
-  font-size: 36px; 
-  font-weight: 700; 
-  margin: 0 0 8px; 
-  background: linear-gradient(135deg, #6366f1, #8b5cf6); 
-  -webkit-background-clip: text; 
-  -webkit-text-fill-color: transparent; 
-  background-clip: text; 
-}
-
-.dashboard-subtitle { 
-  font-size: 18px; 
-  color: var(--muted); 
-  margin: 0; 
-}
+/* Modern Styles */
 
 .header-actions { 
   display: flex; 
@@ -1290,18 +1260,7 @@ body {
   margin: 0; 
 }
 
-/* Dashboard Grid Layout */
-.dashboard-grid { 
-  display: grid; 
-  grid-template-columns: 2fr 1fr; 
-  gap: 32px; 
-  margin-bottom: 40px; 
-}
-
-/* Learning Paths */
-.learning-paths-section .dashboard-card { 
-  padding: 32px; 
-}
+/* Grid Layout */
 
 .card-header { 
   display: flex; 

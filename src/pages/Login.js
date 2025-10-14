@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -20,123 +20,82 @@ function Login() {
   const navigate = useNavigate();
   const animationsRef = useRef([]);
 
+  // Animation setup
   useEffect(() => {
-    // Validate element before animating
-    const validateElement = (element) => {
-      return element && 
-             element.parentNode && 
-             element.isConnected && 
-             document.contains(element);
-    };
+    const validateElement = (element) => element && element.isConnected && document.contains(element);
 
-    // Clean up previous animations
-    animationsRef.current.forEach(animation => {
-      if (animation && typeof animation.kill === 'function') {
-        animation.kill();
-      }
-    });
+    // Clean previous animations
+    animationsRef.current.forEach(anim => anim?.kill());
     animationsRef.current = [];
 
     const card = cardRef.current;
     if (validateElement(card)) {
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      
-      const mainAnim = tl.fromTo(card, 
-        { y: 24, opacity: 0, rotateX: -6 }, 
-        { y: 0, opacity: 1, rotateX: 0, duration: 0.7 }
-      );
-      
-      // Validate stagger elements before animating
-      const staggerElements = card.querySelectorAll('[data-stagger]');
-      const validStaggerElements = Array.from(staggerElements).filter(validateElement);
-      
-      if (validStaggerElements.length > 0) {
-        const staggerAnim = tl.fromTo(validStaggerElements, 
-          { y: 16, opacity: 0 }, 
-          { y: 0, opacity: 1, duration: 0.5, stagger: 0.08 }, 
-          '<0.05'
-        );
+      const mainAnim = tl.fromTo(card, { y: 24, opacity: 0, rotateX: -6 }, { y: 0, opacity: 1, rotateX: 0, duration: 0.7 });
+
+      const staggerElements = Array.from(card.querySelectorAll('[data-stagger]')).filter(validateElement);
+      if (staggerElements.length > 0) {
+        const staggerAnim = tl.fromTo(staggerElements, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.08 }, '<0.05');
         animationsRef.current.push(staggerAnim);
       }
-      
       animationsRef.current.push(mainAnim);
     }
 
-    // ScrollTrigger for below-the-fold feature items with validation
-    const featureItems = document.querySelectorAll('[data-feature-item]');
-    const validFeatureItems = Array.from(featureItems).filter(validateElement);
-    
-    validFeatureItems.forEach((el) => {
-      if (validateElement(el)) {
-        const scrollAnim = gsap.fromTo(
-          el,
-          { y: 30, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.6,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: el,
-              start: 'top 85%',
-              toggleActions: 'play none none reverse'
-            }
-          }
-        );
-        animationsRef.current.push(scrollAnim);
-      }
+    const featureItems = Array.from(document.querySelectorAll('[data-feature-item]')).filter(validateElement);
+    featureItems.forEach(el => {
+      const scrollAnim = gsap.fromTo(el, { y: 30, opacity: 0 }, {
+        y: 0,
+        opacity: 1,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none reverse' }
+      });
+      animationsRef.current.push(scrollAnim);
     });
 
-    // Cleanup function
     return () => {
-      animationsRef.current.forEach(animation => {
-        if (animation && typeof animation.kill === 'function') {
-          animation.kill();
-        }
-      });
+      animationsRef.current.forEach(anim => anim?.kill());
       animationsRef.current = [];
-      
-      // Clean up ScrollTrigger instances
-      ScrollTrigger.getAll().forEach(trigger => {
-        if (trigger && typeof trigger.kill === 'function') {
-          trigger.kill();
-        }
-      });
+      ScrollTrigger.getAll().forEach(trigger => trigger?.kill());
     };
   }, []);
 
+  // Frontend-only login (no backend). Creates a local session using AuthContext
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Basic client-side validation
+      if (!email || !password) {
+        alert('Please enter email and password.');
+        return;
+      }
+
+      // Create a mock user object (no backend)
       const userData = {
-        name: email.split('@')[0] || 'User',
-        email: email,
-        level: 'Intermediate',
-        streak: 7
+        name: email.split('@')[0],
+        email,
+        id: `local_${Date.now()}`,
       };
-      
+
       login(userData);
-      
-      // Check if user has already selected a domain
+
       const existingDomainSelection = localStorage.getItem('userDomainSelection');
-      
       if (existingDomainSelection) {
-        // User has already selected domain, go directly to dashboard
         navigate('/dashboard');
       } else {
-        // New user, show domain selection popup
         setShowDomainSelection(true);
       }
-      
+    } catch (err) {
+      console.error(err);
+      alert('Login failed. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleDomainSelect = (domainData) => {
-    // Save domain selection to localStorage
     localStorage.setItem('userDomainSelection', JSON.stringify(domainData));
     setSelectedDomainData(domainData);
     setShowDomainSelection(false);
@@ -144,13 +103,11 @@ function Login() {
   };
 
   const handleCourseSelect = (course) => {
-    // Save selected course and redirect to dashboard
     localStorage.setItem('selectedCourse', JSON.stringify(course));
     navigate('/dashboard');
   };
 
   const handleSkipCourseSelection = () => {
-    // Skip course selection and go to dashboard
     navigate('/dashboard');
   };
 
@@ -166,18 +123,9 @@ function Login() {
                 Continue your AI-powered learning journey and unlock your potential with personalized education.
               </p>
               <div className="login-features">
-                <div className="login-feature">
-                  <span className="feature-icon">🎯</span>
-                  <span>Personalized Learning Path</span>
-                </div>
-                <div className="login-feature">
-                  <span className="feature-icon">🤖</span>
-                  <span>AI-Powered Interview Practice</span>
-                </div>
-                <div className="login-feature">
-                  <span className="feature-icon">📊</span>
-                  <span>Real-time Progress Tracking</span>
-                </div>
+                <div className="login-feature"><span className="feature-icon">🎯</span>Personalized Learning Path</div>
+                <div className="login-feature"><span className="feature-icon">🤖</span>AI-Powered Interview Practice</div>
+                <div className="login-feature"><span className="feature-icon">📊</span>Real-time Progress Tracking</div>
               </div>
             </div>
 
@@ -190,10 +138,10 @@ function Login() {
 
                 <div className="form-group" data-stagger>
                   <label htmlFor="email">Email Address</label>
-                  <input 
-                    id="email" 
-                    type="email" 
-                    className="form-input" 
+                  <input
+                    id="email"
+                    type="email"
+                    className="form-input"
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -203,10 +151,10 @@ function Login() {
 
                 <div className="form-group" data-stagger>
                   <label htmlFor="password">Password</label>
-                  <input 
-                    id="password" 
-                    type="password" 
-                    className="form-input" 
+                  <input
+                    id="password"
+                    type="password"
+                    className="form-input"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -215,14 +163,10 @@ function Login() {
                 </div>
 
                 <div className="form-actions" data-stagger>
-                  <button 
-                    className="btn btnPrimary btn-large" 
-                    type="submit"
-                    disabled={isLoading}
-                  >
+                  <button className="btn btnPrimary btn-large" type="submit" disabled={isLoading}>
                     {isLoading ? 'Signing In...' : 'Sign In'}
                   </button>
-                  
+
                   <div className="form-links">
                     <Link to="/signup" className="auth-link">
                       Don't have an account? <span>Sign Up</span>
@@ -275,10 +219,7 @@ function Login() {
           <div className="course-recommendations-modal">
             <div className="modal-header">
               <h2>Perfect! Here are your recommended courses</h2>
-              <button 
-                className="skip-btn"
-                onClick={handleSkipCourseSelection}
-              >
+              <button className="skip-btn" onClick={handleSkipCourseSelection}>
                 Skip for now
               </button>
             </div>
