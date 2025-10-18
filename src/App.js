@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, Link, NavLink, useParams, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -7,12 +7,12 @@ import Landing from './pages/Landing';
 import About from './pages/About';
 import Features from './pages/Features';
 import InterviewPractice from './pages/InterviewPractice';
-
-import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Footer from './components/Footer';
 import DomainSelectionPage from './pages/DomainSelectionPage';
 import CourseRecommendations from './components/CourseRecommendations';
+
+import Login from './pages/Login';
 
 function CoursesCatalog() {
   const navigate = useNavigate();
@@ -208,7 +208,6 @@ function AppContent() {
         <div className="container header-inner">
           <Link to={isAuthenticated ? "/courses" : "/"} className="brand" aria-label="AI E-Learning Home">
             <span className="brand-logo" aria-hidden>AI</span>
-            <span className="brand-text">E‑Learning & Proctor</span>
           </Link>
           
           <button 

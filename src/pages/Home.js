@@ -179,10 +179,10 @@ function Home() {
             </div>
           </div>
           <div className="hero-visual" data-fade>
-            <div className="hero-mockup">
-              <div className="mockup-content">
-                <h3>Interactive Learning Dashboard</h3>
-                <p>Track your progress in real-time</p>
+            <div style={{ height: '520px', borderRadius: '16px', background: 'var(--card-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              <div>
+                <h2 style={{ margin: 0 }}>Visual Preview</h2>
+                <p style={{ marginTop: 8 }}>ScrollStack placeholder for preview</p>
               </div>
             </div>
           </div>

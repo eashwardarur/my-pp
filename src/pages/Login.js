@@ -8,11 +8,63 @@ import CourseRecommendations from '../components/CourseRecommendations';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Lightweight Step wrapper
+const Step = ({ children }) => <div>{children}</div>;
+
+// Stepper with dynamic Next/Finish, validation, and progress indicator
+const Stepper = ({
+  children,
+  initialStep = 1,
+  onStepChange,
+  onFinalStepCompleted,
+  backButtonText = 'Back',
+  nextButtonText = 'Next',
+  isNextDisabled = false,
+}) => {
+  const childrenArray = React.Children.toArray(children);
+  const total = childrenArray.length;
+  const [step, setStep] = useState(initialStep);
+
+  useEffect(() => {
+    onStepChange?.(step);
+  }, [step]);
+
+  const next = () => {
+    if (step < total) {
+      setStep(step + 1);
+    } else {
+      onFinalStepCompleted?.();
+    }
+  };
+
+  const prev = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, color: 'var(--text-muted)' }}>Step {step} of {total}</div>
+      <div style={{ marginBottom: 24 }}>
+        {childrenArray[step - 1]}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        <button type="button" onClick={prev} className="btn btn-outline" disabled={step === 1}> {backButtonText} </button>
+        <button type="button" onClick={next} className="btn btnPrimary" disabled={isNextDisabled}>
+          {step === total ? 'Finish' : nextButtonText}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 function Login() {
   const cardRef = useRef(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingSplash, setLoadingSplash] = useState(true);
+  const [currentStep, setCurrentStep] = useState(1);
   const [showDomainSelection, setShowDomainSelection] = useState(false);
   const [showCourseRecommendations, setShowCourseRecommendations] = useState(false);
   const [selectedDomainData, setSelectedDomainData] = useState(null);
@@ -20,11 +72,10 @@ function Login() {
   const navigate = useNavigate();
   const animationsRef = useRef([]);
 
-  // Animation setup
+  // Animation setup (kept for consistency, though the Stepper replaces the old form)
   useEffect(() => {
     const validateElement = (element) => element && element.isConnected && document.contains(element);
 
-    // Clean previous animations
     animationsRef.current.forEach(anim => anim?.kill());
     animationsRef.current = [];
 
@@ -32,26 +83,8 @@ function Login() {
     if (validateElement(card)) {
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
       const mainAnim = tl.fromTo(card, { y: 24, opacity: 0, rotateX: -6 }, { y: 0, opacity: 1, rotateX: 0, duration: 0.7 });
-
-      const staggerElements = Array.from(card.querySelectorAll('[data-stagger]')).filter(validateElement);
-      if (staggerElements.length > 0) {
-        const staggerAnim = tl.fromTo(staggerElements, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.08 }, '<0.05');
-        animationsRef.current.push(staggerAnim);
-      }
       animationsRef.current.push(mainAnim);
     }
-
-    const featureItems = Array.from(document.querySelectorAll('[data-feature-item]')).filter(validateElement);
-    featureItems.forEach(el => {
-      const scrollAnim = gsap.fromTo(el, { y: 30, opacity: 0 }, {
-        y: 0,
-        opacity: 1,
-        duration: 0.6,
-        ease: 'power2.out',
-        scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none reverse' }
-      });
-      animationsRef.current.push(scrollAnim);
-    });
 
     return () => {
       animationsRef.current.forEach(anim => anim?.kill());
@@ -60,23 +93,26 @@ function Login() {
     };
   }, []);
 
-  // Frontend-only login (no backend). Creates a local session using AuthContext
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  // 3s loader splash for ACE LEARNING
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingSplash(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
+  // Frontend-only login (no backend). Creates a local session using AuthContext
+  const performLogin = async () => {
+    setIsLoading(true);
     try {
-      // Basic client-side validation
       if (!email || !password) {
         alert('Please enter email and password.');
         return;
       }
 
-      // Create a mock user object (no backend)
       const userData = {
         name: email.split('@')[0],
         email,
         id: `local_${Date.now()}`,
+        role,
       };
 
       login(userData);
@@ -93,6 +129,12 @@ function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Backwards compatibility if form submit is used anywhere
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    await performLogin();
   };
 
   const handleDomainSelect = (domainData) => {
@@ -113,98 +155,102 @@ function Login() {
 
   return (
     <div className="login-page">
-      {/* Login Hero Section */}
-      <section className="login-hero section">
-        <div className="container">
-          <div className="login-content">
-            <div className="login-info">
-              <h1 className="login-title">Welcome Back</h1>
-              <p className="login-subtitle">
-                Continue your AI-powered learning journey and unlock your potential with personalized education.
-              </p>
-              <div className="login-features">
-                <div className="login-feature"><span className="feature-icon">🎯</span>Personalized Learning Path</div>
-                <div className="login-feature"><span className="feature-icon">🤖</span>AI-Powered Interview Practice</div>
-                <div className="login-feature"><span className="feature-icon">📊</span>Real-time Progress Tracking</div>
+      {loadingSplash ? (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+          <h1 style={{ color: '#fff', fontSize: 36, fontWeight: 700 }}>ACE LEARNING</h1>
+        </div>
+      ) : (
+        <section className="section" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
+          <div className="container" style={{ maxWidth: 560, width: '100%' }}>
+            <div ref={cardRef} className="card" style={{ padding: 24 }}>
+              <div className="section-header" style={{ marginBottom: 12 }}>
+                <h2>Login Setup</h2>
+                <p>Follow the steps to sign in to your account.</p>
               </div>
-            </div>
+              <Stepper
+                initialStep={1}
+                onStepChange={(s) => setCurrentStep(s)}
+                onFinalStepCompleted={performLogin}
+                backButtonText="Previous"
+                nextButtonText={isLoading ? 'Please wait...' : 'Next'}
+                isNextDisabled={
+                  isLoading ||
+                  (currentStep === 2 && !email) ||
+                  (currentStep === 3 && !password) ||
+                  (currentStep === 4 && !role)
+                }
+              >
+                <Step>
+                  <h3>Welcome to ACE LEARNING</h3>
+                  <p style={{ color: 'var(--text-muted)' }}>Let's get started with your login process.</p>
+                </Step>
 
-            <div className="login-form-container">
-              <form ref={cardRef} className="login-form" onSubmit={handleLogin}>
-                <div className="form-header" data-stagger>
-                  <h2>Sign In</h2>
-                  <p>Access your learning dashboard</p>
-                </div>
-
-                <div className="form-group" data-stagger>
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    className="form-input"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-group" data-stagger>
-                  <label htmlFor="password">Password</label>
-                  <input
-                    id="password"
-                    type="password"
-                    className="form-input"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-actions" data-stagger>
-                  <button className="btn btnPrimary btn-large" type="submit" disabled={isLoading}>
-                    {isLoading ? 'Signing In...' : 'Sign In'}
-                  </button>
-
-                  <div className="form-links">
-                    <Link to="/signup" className="auth-link">
-                      Don't have an account? <span>Sign Up</span>
-                    </Link>
+                <Step>
+                  <div className="form-group">
+                    <label htmlFor="email">Enter your Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      className="form-input"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
                   </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
+                </Step>
 
-      {/* Benefits Section */}
-      <section className="login-benefits section">
-        <div className="container">
-          <div className="section-header">
-            <h2>Why Choose Our Platform?</h2>
-            <div className="section-line"></div>
+                <Step>
+                  <div className="form-group">
+                    <label htmlFor="password">Enter your Password</label>
+                    <input
+                      id="password"
+                      type="password"
+                      className="form-input"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </Step>
+
+                <Step>
+                  <div className="form-group">
+                    <label htmlFor="role">Select your Role</label>
+                    <select
+                      id="role"
+                      className="form-input"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      required
+                    >
+                      <option value="">Choose your role</option>
+                      <option value="student">Student</option>
+                      <option value="learner">Learner</option>
+                      <option value="professor">Professor</option>
+                      <option value="expert">Expert</option>
+                    </select>
+                  </div>
+                </Step>
+
+                <Step>
+                  <div className="card" style={{ background: 'var(--bg-muted)', padding: 16 }}>
+                    <p><strong>Email:</strong> {email || 'Not entered'}</p>
+                    <p><strong>Role:</strong> {role || 'Not selected'}</p>
+                  </div>
+                  <div style={{ marginTop: 12, color: 'var(--text-muted)' }}>
+                    {isLoading ? 'Signing you in...' : 'Click Finish to sign in.'}
+                  </div>
+                  <div className="form-links" style={{ marginTop: 8 }}>
+                    <Link to="/signup" className="auth-link">Don't have an account? <span>Sign Up</span></Link>
+                  </div>
+                </Step>
+              </Stepper>
+            </div>
           </div>
-          <div className="benefits-grid">
-            <div className="benefit-card" data-feature-item>
-              <div className="benefit-icon">🔒</div>
-              <h3>Secure & Private</h3>
-              <p>Your data is protected with enterprise-grade security and encryption standards.</p>
-            </div>
-            <div className="benefit-card" data-feature-item>
-              <div className="benefit-icon">📈</div>
-              <h3>Track Progress</h3>
-              <p>Monitor your learning journey with detailed analytics and personalized insights.</p>
-            </div>
-            <div className="benefit-card" data-feature-item>
-              <div className="benefit-icon">🎯</div>
-              <h3>AI-Powered Practice</h3>
-              <p>Experience realistic interview scenarios with our advanced AI proctor system.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Domain Selection Popup */}
       <DomainSelection
